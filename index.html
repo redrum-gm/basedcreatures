@@ -1290,7 +1290,14 @@ function toggleFaq(el) {
 }
 
 // WL CHECKER — queries Azukats contract on Base via public RPC
-const AZUKATS_CONTRACT = '0xB02788cb3aCceDAF59F5bACd4D0BD109cc24010a';
+const AZUKATS_CONTRACT = '0xB02788cb3aCceDAF59F5bACd4D0BD109cc24010a';  // Phase 1 WL — Azukats holders
+const WL2_CONTRACTS = [                                                   // Phase 2 WL GTD
+  '0x6891698AAc0afc51AFA4BB639Bb895dEAFa1BacC',
+  '0x95Bc4C2e01c2e2D9e537e7a9FE58187e88dd8019',
+  '0x424d781E0163B5A42ca2F27d036c2d5C561022C3',
+  '0xf427901d009e3f1f14eA89E08210A17Aa79ED699',
+  '0x9e9265045AEe43C1cf4346CB0e8e57BE578C2e81',
+];
 const BASE_RPC = 'https://mainnet.base.org';
 
 async function ethCall(to, data) {
@@ -1358,16 +1365,32 @@ async function checkWallet() {
 
   try {
     const data = encodeBalanceOf(input);
-    const hex = await ethCall(AZUKATS_CONTRACT, data);
-    const balance = decodeUint256(hex);
 
-    if(balance > 0) {
+    // Check Phase 1 + all Phase 2 contracts in parallel
+    const [hex1, ...hex2arr] = await Promise.all([
+      ethCall(AZUKATS_CONTRACT, data),
+      ...WL2_CONTRACTS.map(c => ethCall(c, data)),
+    ]);
+
+    const balance1 = decodeUint256(hex1); // Azukats — Phase 1
+    const balance2 = hex2arr.reduce((sum, h) => sum + decodeUint256(h), 0); // any Phase 2
+
+    if(balance1 > 0) {
       resultIcon.textContent = '✦';
       resultStatusText.style.color = '#c9a84c';
-      resultStatusText.textContent = 'Whitelist Status · Verified';
+      resultStatusText.textContent = 'Whitelist Status · Phase 1';
       resultMain.className = 'result-main yes';
-      resultMain.textContent = '✓ You are whitelisted';
-      resultSub.textContent = 'Congratulations! Your wallet qualifies for the Based Creatures whitelist. You qualify for Phase 1 — a FREE mint exclusively for Azukats holders.';
+      resultMain.textContent = '✓ Phase 1 — Free Mint';
+      resultSub.textContent = 'Your wallet holds Azukats NFTs. You qualify for Phase 1 — a free mint exclusively for Azukats holders.';
+      resultDivider.style.display = 'none';
+      resultDetails.style.display = 'none';
+    } else if(balance2 > 0) {
+      resultIcon.textContent = '✦';
+      resultStatusText.style.color = '#c9a84c';
+      resultStatusText.textContent = 'Whitelist Status · Phase 2';
+      resultMain.className = 'result-main yes';
+      resultMain.textContent = '✓ Phase 2 — WL GTD';
+      resultSub.textContent = 'Your wallet is guaranteed a whitelist spot. You qualify for Phase 2 — mint at 0.002 ETH before public sale.';
       resultDivider.style.display = 'none';
       resultDetails.style.display = 'none';
     } else {
@@ -1376,7 +1399,7 @@ async function checkWallet() {
       resultStatusText.textContent = 'Whitelist Status · Not Eligible';
       resultMain.className = 'result-main no';
       resultMain.textContent = 'Not whitelisted';
-      resultSub.textContent = 'This wallet does not hold any Azukats NFTs on Base. Acquire an Azukat to earn guaranteed whitelist access, or wait for the public sale announcement.';
+      resultSub.textContent = 'This wallet does not qualify for Phase 1 or Phase 2. Public mint opens at 0.003 ETH — stay tuned for the announcement.';
       resultDivider.style.display = 'none';
       resultDetails.style.display = 'none';
     }
