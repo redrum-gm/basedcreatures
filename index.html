@@ -827,7 +827,7 @@
       <div class="stat-item"><div class="stat-num">2,222</div><div class="stat-label">Total Supply</div></div>
       <div class="stat-item"><div class="stat-num">FREE</div><div class="stat-label">Phase 1 · Azukats</div></div>
       <div class="stat-item"><div class="stat-num">0.0015 ETH</div><div class="stat-label">Phase 2 · WL GTD</div></div>
-      <div class="stat-item"><div class="stat-num">0.0025 ETH</div><div class="stat-label">Phase 3 · Public</div></div>
+      <div class="stat-item"><div class="stat-num">0.0025 ETH</div><div class="stat-label">Phase 3 · WL FCFS</div></div>
     </div>
   </div>
   <div class="hero-image-panel">
@@ -1173,8 +1173,8 @@
     </div>
     <div class="roadmap-card">
       <div class="roadmap-phase">Phase III</div>
-      <div class="roadmap-title">Public Mint — 0.0025 ETH</div>
-      <div class="roadmap-desc">Public mint opens to everyone. Holder benefits, secondary royalties, and long-term ecosystem utility announced.</div>
+      <div class="roadmap-title">WL FCFS — 0.0025 ETH</div>
+      <div class="roadmap-desc">Whitelist first come, first served. Holder benefits, secondary royalties, and long-term ecosystem utility announced.</div>
       <span class="roadmap-status status-future">Upcoming</span>
     </div>
   </div>
@@ -1189,7 +1189,7 @@
   <div class="faq-list">
     <div class="faq-item open">
       <div class="faq-q" onclick="toggleFaq(this)">What are the 3 mint phases? <span class="faq-plus">+</span></div>
-      <div class="faq-a">There are three phases. Phase 1 is a free mint exclusively for Azukats holders on Base. Phase 2 is a guaranteed WL spot for friends and partner communities at 0.0015 ETH. Phase 3 is the public mint open to everyone at 0.0025 ETH.</div>
+      <div class="faq-a">There are three phases. Phase 1 is a free mint exclusively for Azukats holders on Base. Phase 2 is a guaranteed WL spot for friends and partner communities at 0.0015 ETH. Phase 3 is WL FCFS (first come, first served) at 0.0025 ETH.</div>
     </div>
     <div class="faq-item">
       <div class="faq-q" onclick="toggleFaq(this)">How do I qualify for Phase 1 free mint? <span class="faq-plus">+</span></div>
@@ -1354,7 +1354,7 @@ async function checkWallet() {
       resultStatusText.textContent = 'Whitelist Status · Phase 2';
       resultMain.className = 'result-main yes';
       resultMain.textContent = '✓ Phase 2 — WL GTD';
-      resultSub.textContent = 'Your wallet is guaranteed a whitelist spot. You qualify for Phase 2 — mint at 0.0015 ETH before public sale.';
+      resultSub.textContent = 'Your wallet is guaranteed a whitelist spot. You qualify for Phase 2 — mint at 0.0015 ETH before Phase 3.';
       resultDivider.style.display = 'none';
       resultDetails.style.display = 'none';
     } else {
@@ -1363,7 +1363,7 @@ async function checkWallet() {
       resultStatusText.textContent = 'Whitelist Status · Not Eligible';
       resultMain.className = 'result-main no';
       resultMain.textContent = 'Not whitelisted';
-      resultSub.textContent = 'This wallet does not qualify for Phase 1 or Phase 2. Public mint opens at 0.0025 ETH — stay tuned for the announcement.';
+      resultSub.textContent = 'This wallet does not qualify for Phase 1 or Phase 2. Phase 3 WL FCFS mints at 0.0025 ETH — stay tuned for the announcement.';
       resultDivider.style.display = 'none';
       resultDetails.style.display = 'none';
     }
