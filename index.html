@@ -763,6 +763,24 @@
     .creatures-grid { grid-template-columns:repeat(3,1fr); gap:6px; }
   }
 
+
+  /* ===== Subtle motion (respects reduced-motion) ===== */
+  @keyframes voidPulse {
+    0%,100% { text-shadow:0 0 18px rgba(150,110,255,.55), 0 0 42px rgba(110,70,220,.35); }
+    50%     { text-shadow:0 0 24px rgba(170,130,255,.75), 0 0 58px rgba(120,80,230,.50); }
+  }
+  .hero-title .line2 { animation:voidPulse 5s ease-in-out infinite; }
+  .hero-particles { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; }
+  .stat-num { font-variant-numeric:tabular-nums; }
+  .reveal {
+    opacity:0; transform:translateY(22px);
+    transition:opacity .8s ease var(--d,0s), transform .8s ease var(--d,0s), border-color .3s;
+  }
+  .reveal.in { opacity:1; transform:none; }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-title .line2 { animation:none; }
+    .hero-particles { display:none; }
+  }
 </style>
 </head>
 <body>
@@ -1414,6 +1432,127 @@ window.addEventListener('resize', () => {
 });
 
 
+
+// ===== Subtle motion: particles, reveal, count-up, tilt =====
+(function(){
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fineHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (reduce) return;
+
+  // 1) Void particles in the hero
+  (function(){
+    const hero = document.getElementById('hero');
+    if (!hero) return;
+    const c = document.createElement('canvas');
+    c.className = 'hero-particles';
+    c.setAttribute('aria-hidden','true');
+    hero.insertBefore(c, hero.querySelector('.hero-ornament'));
+    const ctx = c.getContext('2d');
+    const colors = [[204,255,0],[150,110,255]];
+    let w=0, h=0, parts=[], visible=true, looping=false;
+    function make(init){
+      const col = colors[Math.random() < 0.55 ? 1 : 0];
+      return { x:Math.random()*w, y:init ? Math.random()*h : h+10, r:Math.random()*1.4+0.6,
+               vy:Math.random()*0.25+0.08, sw:Math.random()*0.6+0.2, ph:Math.random()*6.28,
+               a:Math.random()*0.35+0.15, col };
+    }
+    function resize(){
+      const dpr = Math.min(window.devicePixelRatio||1, 2);
+      w = hero.clientWidth; h = hero.clientHeight;
+      c.width = w*dpr; c.height = h*dpr;
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      const n = Math.round(Math.min(44, Math.max(16, (w*h)/34000)));
+      while (parts.length < n) parts.push(make(true));
+      parts.length = n;
+    }
+    function frame(t){
+      if (!visible) { looping = false; return; }
+      ctx.clearRect(0,0,w,h);
+      for (const p of parts){
+        p.y -= p.vy;
+        p.x += Math.sin(t/2200 + p.ph) * 0.12 * p.sw;
+        if (p.y < -10) { Object.assign(p, make(false)); }
+        const tw = 0.6 + 0.4*Math.sin(t/900 + p.ph);
+        const a = p.a * tw;
+        ctx.fillStyle = 'rgba('+p.col[0]+','+p.col[1]+','+p.col[2]+','+(a*0.15)+')';
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r*4, 0, 6.283); ctx.fill();
+        ctx.fillStyle = 'rgba('+p.col[0]+','+p.col[1]+','+p.col[2]+','+a+')';
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill();
+      }
+      requestAnimationFrame(frame);
+    }
+    function start(){ if (!looping) { looping = true; requestAnimationFrame(frame); } }
+    resize();
+    window.addEventListener('resize', resize);
+    new IntersectionObserver(es => { visible = es[0].isIntersecting; if (visible) start(); }).observe(hero);
+    start();
+  })();
+
+  // 2) Reveal on scroll (classes added by JS so nothing hides if JS fails)
+  (function(){
+    const sel = '.section-header, .checker-inner, .roadmap-card, .creature-tile, .realm-card, .ancient-card';
+    const els = document.querySelectorAll(sel);
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        const el = e.target;
+        io.unobserve(el);
+        el.classList.add('in');
+        const d = parseFloat(el.style.getPropertyValue('--d')) || 0;
+        setTimeout(() => { el.classList.remove('reveal','in'); el.style.removeProperty('--d'); }, 850 + d*1000);
+      });
+    }, { threshold:0.12, rootMargin:'0px 0px -6% 0px' });
+    els.forEach(el => {
+      const sibs = Array.from(el.parentElement.children).filter(c => c.matches(sel));
+      el.style.setProperty('--d', ((sibs.indexOf(el) % 4) * 0.08).toFixed(2) + 's');
+      el.classList.add('reveal');
+      io.observe(el);
+    });
+  })();
+
+  // 3) Count-up for hero stats
+  (function(){
+    const nums = Array.from(document.querySelectorAll('.hero-stats .stat-num'));
+    const items = [];
+    nums.forEach(el => {
+      const m = el.textContent.trim().match(/^([\d,]*\.?\d+)(.*)$/);
+      if (!m) return;
+      const dec = (m[1].split('.')[1] || '').length;
+      const target = parseFloat(m[1].replace(/,/g,''));
+      const fmt = n => n.toLocaleString('en-US', { minimumFractionDigits:dec, maximumFractionDigits:dec }) + m[2];
+      const item = el.parentElement;
+      item.style.minWidth = item.getBoundingClientRect().width + 'px';
+      el.textContent = fmt(0);
+      items.push({ el, target, fmt });
+    });
+    if (!items.length) return;
+    function run(){
+      const t0 = performance.now(), dur = 1400;
+      (function tick(now){
+        const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+        items.forEach(i => { i.el.textContent = i.fmt(i.target * e); });
+        if (k < 1) requestAnimationFrame(tick);
+      })(t0);
+    }
+    const box = document.querySelector('.hero-stats');
+    const io = new IntersectionObserver(es => { if (es[0].isIntersecting) { io.disconnect(); setTimeout(run, 250); } }, { threshold:0.4 });
+    io.observe(box);
+  })();
+
+  // 4) Gentle tilt on cards (desktop pointers only)
+  if (fineHover) {
+    function tilt(el, lift){
+      el.addEventListener('mousemove', e => {
+        const r = el.getBoundingClientRect();
+        const x = (e.clientX - r.left)/r.width - 0.5, y = (e.clientY - r.top)/r.height - 0.5;
+        el.style.transform = 'perspective(900px) rotateX(' + (-y*5).toFixed(2) + 'deg) rotateY(' + (x*5).toFixed(2) + 'deg) ' + lift;
+      });
+      el.addEventListener('mouseleave', () => { el.style.transform = ''; });
+    }
+    document.querySelectorAll('.creature-tile').forEach(el => tilt(el, 'scale(1.02)'));
+    document.querySelectorAll('.realm-card, .ancient-card').forEach(el => tilt(el, 'translateY(-4px)'));
+  }
+})();
 </script>
 </body>
 </html>
