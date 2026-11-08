@@ -859,6 +859,32 @@
     .rm-modal, .rm-panel { transition:none; }
     .rm-swap { animation:none; }
   }
+
+  /* ===== Lantern reveal (hero) + sound toggle ===== */
+  .hero-runes {
+    position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0;
+    --lx:50%; --ly:50%; --lr:240px;
+    -webkit-mask-image:radial-gradient(circle var(--lr) at var(--lx) var(--ly), rgba(0,0,0,1) 0%, rgba(0,0,0,.55) 35%, rgba(0,0,0,.09) 70%, rgba(0,0,0,.03) 100%);
+    mask-image:radial-gradient(circle var(--lr) at var(--lx) var(--ly), rgba(0,0,0,1) 0%, rgba(0,0,0,.55) 35%, rgba(0,0,0,.09) 70%, rgba(0,0,0,.03) 100%);
+  }
+  .snd-btn {
+    position:fixed; left:20px; bottom:20px; z-index:4000;
+    display:flex; align-items:center; gap:10px;
+    background:rgba(9,9,16,.72); border:1px solid var(--border); color:var(--muted);
+    font-family:'Cinzel',serif; font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+    padding:10px 14px; cursor:pointer; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+    transition:color .25s, border-color .25s;
+  }
+  .snd-btn:hover, .snd-btn:focus-visible { color:var(--text); border-color:var(--gold); outline:none; }
+  .snd-btn .bars { display:inline-flex; align-items:flex-end; gap:2px; height:12px; }
+  .snd-btn .bars i { width:2px; height:3px; background:currentColor; display:block; }
+  .snd-btn[aria-pressed="true"] { color:var(--gold); border-color:rgba(204,255,0,.35); }
+  .snd-btn[aria-pressed="true"] .bars i { animation:sndBar 1.1s ease-in-out infinite; }
+  .snd-btn[aria-pressed="true"] .bars i:nth-child(2) { animation-delay:.2s; }
+  .snd-btn[aria-pressed="true"] .bars i:nth-child(3) { animation-delay:.4s; }
+  @keyframes sndBar { 0%,100% { height:3px; } 50% { height:12px; } }
+  @media (max-width:600px) { .snd-btn { left:12px; bottom:12px; } }
+  @media (prefers-reduced-motion: reduce) { .hero-runes { display:none; } .snd-btn .bars i { animation:none !important; } }
 </style>
 </head>
 <body>
@@ -1733,6 +1759,155 @@ window.addEventListener('resize', () => {
       e.preventDefault();
       f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
     }
+  });
+})();
+
+// ===== Lantern reveal: hidden runes revealed by the pointer (hero) =====
+(function(){
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const hero = document.getElementById('hero');
+  if (!hero) return;
+  const c = document.createElement('canvas');
+  c.className = 'hero-runes'; c.setAttribute('aria-hidden','true');
+  hero.insertBefore(c, hero.querySelector('.hero-particles') || hero.querySelector('.hero-ornament'));
+  const ctx = c.getContext('2d');
+  let w = 0, h = 0, rt = null;
+
+  function drawRunes(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    w = hero.clientWidth; h = hero.clientHeight;
+    c.width = w*dpr; c.height = h*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    const cell = w < 700 ? 46 : 60, rw = cell*0.34, rh = cell*0.6;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (let gy = 0; gy*cell < h + cell; gy++){
+      for (let gx = 0; gx*cell < w + cell; gx++){
+        if (Math.random() < 0.28) continue;
+        const ox = gx*cell + (cell-rw)/2 + (Math.random()-0.5)*6, oy = gy*cell + (cell-rh)/2 + (Math.random()-0.5)*6;
+        const violet = Math.random() < 0.35;
+        const col = violet ? '150,110,255' : '204,255,0';
+        ctx.strokeStyle = 'rgba(' + col + ',0.85)';
+        ctx.shadowColor = 'rgba(' + col + ',0.9)'; ctx.shadowBlur = 7;
+        ctx.lineWidth = 1.8;
+        const pt = () => [ox + Math.floor(Math.random()*3)*rw/2, oy + Math.floor(Math.random()*4)*rh/3];
+        let cur = pt();
+        ctx.beginPath(); ctx.moveTo(cur[0], cur[1]);
+        const steps = 3 + Math.floor(Math.random()*3);
+        for (let k = 0; k < steps; k++){ cur = pt(); ctx.lineTo(cur[0], cur[1]); }
+        ctx.stroke();
+        if (Math.random() < 0.4){ ctx.beginPath(); ctx.arc(ox + rw/2, oy - 5, 1.6, 0, 6.283); ctx.fillStyle = 'rgba(' + col + ',0.9)'; ctx.fill(); }
+      }
+    }
+  }
+  drawRunes();
+  window.addEventListener('resize', () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => { if (hero.clientWidth !== w || hero.clientHeight !== h) drawRunes(); }, 250);
+  });
+
+  // Light position: follows pointer, wanders on its own when idle
+  let tx = 0, ty = 0, x = 0, y = 0, lastMove = -1e9, visible = true, looping = false, started = false;
+  hero.addEventListener('pointermove', e => {
+    const r = hero.getBoundingClientRect();
+    tx = e.clientX - r.left; ty = e.clientY - r.top; lastMove = performance.now();
+    if (!started) { x = tx; y = ty; started = true; }
+  });
+  function frame(t){
+    if (!visible) { looping = false; return; }
+    if (t - lastMove > 2500) {
+      tx = w*(0.5 + 0.32*Math.sin(t/3100)); ty = h*(0.5 + 0.26*Math.sin(t/2300 + 1));
+      if (!started) { x = tx; y = ty; started = true; }
+    }
+    x += (tx - x)*0.09; y += (ty - y)*0.09;
+    const base = w < 700 ? 150 : 240;
+    const r = base*(1 + 0.035*Math.sin(t/170) + 0.025*Math.sin(t/410));
+    c.style.setProperty('--lx', x.toFixed(1) + 'px');
+    c.style.setProperty('--ly', y.toFixed(1) + 'px');
+    c.style.setProperty('--lr', r.toFixed(1) + 'px');
+    requestAnimationFrame(frame);
+  }
+  function start(){ if (!looping) { looping = true; requestAnimationFrame(frame); } }
+  new IntersectionObserver(es => { visible = es[0].isIntersecting; if (visible) start(); }).observe(hero);
+  start();
+})();
+
+// ===== Ambient sound (synthesized, original — starts only when the visitor taps the button) =====
+(function(){
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const btn = document.createElement('button');
+  btn.className = 'snd-btn'; btn.type = 'button';
+  btn.setAttribute('aria-pressed','false'); btn.setAttribute('aria-label','Toggle ambient sound');
+  btn.innerHTML = '<span class="bars"><i></i><i></i><i></i></span><span class="snd-label">Sound off</span>';
+  if (!AC) return;
+  document.body.appendChild(btn);
+  const label = btn.querySelector('.snd-label');
+  let ac, master, started = false, on = false, timer = null;
+
+  function build(){
+    ac = new AC();
+    master = ac.createGain(); master.gain.value = 0; master.connect(ac.destination);
+    // Reverb from generated noise
+    const len = ac.sampleRate*4, ir = ac.createBuffer(2, len, ac.sampleRate);
+    for (let ch = 0; ch < 2; ch++){ const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1)*Math.pow(1 - i/len, 2.6); }
+    const rev = ac.createConvolver(); rev.buffer = ir;
+    const wet = ac.createGain(); wet.gain.value = 0.55; rev.connect(wet); wet.connect(master);
+    const dry = ac.createGain(); dry.gain.value = 0.7; dry.connect(master);
+    const bus = ac.createGain(); bus.connect(dry); bus.connect(rev);
+
+    // Drone: low detuned saws through a slowly breathing low-pass
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 240; lp.Q.value = 3; lp.connect(bus);
+    const lfo = ac.createOscillator(); lfo.frequency.value = 0.045;
+    const lfoG = ac.createGain(); lfoG.gain.value = 110; lfo.connect(lfoG); lfoG.connect(lp.frequency); lfo.start();
+    [[55,'sawtooth',0.10],[55.35,'sawtooth',0.09],[110,'sine',0.07],[82.41,'triangle',0.06]].forEach(a => {
+      const o = ac.createOscillator(); o.type = a[1]; o.frequency.value = a[0];
+      const g = ac.createGain(); g.gain.value = a[2]; o.connect(g); g.connect(lp); o.start();
+    });
+    // Wind: band-passed noise
+    const nb = ac.createBuffer(1, ac.sampleRate*3, ac.sampleRate), nd = nb.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = Math.random()*2-1;
+    const ns = ac.createBufferSource(); ns.buffer = nb; ns.loop = true;
+    const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 520; bp.Q.value = 0.8;
+    const wg = ac.createGain(); wg.gain.value = 0.05;
+    const wl = ac.createOscillator(); wl.frequency.value = 0.07; const wlg = ac.createGain(); wlg.gain.value = 0.035;
+    wl.connect(wlg); wlg.connect(wg.gain); wl.start();
+    ns.connect(bp); bp.connect(wg); wg.connect(bus); ns.start();
+
+    // Sparse bell notes (A phrygian)
+    const scale = [220, 233.08, 261.63, 293.66, 329.63, 349.23, 392, 440];
+    function bell(){
+      if (!on) return;
+      const f = scale[Math.floor(Math.random()*scale.length)]*(Math.random() < 0.3 ? 2 : 1), t = ac.currentTime;
+      [[1,0.09],[2.76,0.025],[5.4,0.01]].forEach(p => {
+        const o = ac.createOscillator(); o.type = 'sine'; o.frequency.value = f*p[0];
+        const g = ac.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(p[1], t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 4.5);
+        o.connect(g); g.connect(bus); o.start(t); o.stop(t + 4.6);
+      });
+      timer = setTimeout(bell, 3500 + Math.random()*6000);
+    }
+    build.bell = bell;
+  }
+  function set(next){
+    on = next;
+    btn.setAttribute('aria-pressed', String(on));
+    label.textContent = on ? 'Sound on' : 'Sound off';
+    if (on) {
+      if (!started) { build(); started = true; }
+      ac.resume();
+      master.gain.cancelScheduledValues(ac.currentTime);
+      master.gain.setTargetAtTime(0.55, ac.currentTime, 1.2);
+      clearTimeout(timer); timer = setTimeout(build.bell, 1500);
+    } else if (ac) {
+      master.gain.cancelScheduledValues(ac.currentTime);
+      master.gain.setTargetAtTime(0, ac.currentTime, 0.4);
+      clearTimeout(timer);
+    }
+  }
+  btn.addEventListener('click', () => set(!on));
+  document.addEventListener('visibilitychange', () => {
+    if (!ac) return;
+    if (document.hidden) ac.suspend(); else if (on) ac.resume();
   });
 })();
 </script>
