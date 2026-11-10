@@ -948,7 +948,7 @@
       <span class="line2">Voidwalkers</span>
     </h1>
     <p class="hero-desc">
-      A collection of 2,222 unique Voidwalkers scattered across ten ancient realms on <span>Robinhood Chain</span>.
+      A collection of 2,222 unique characters scattered across ten ancient realms on <span>Robinhood Chain</span>.
     </p>
     <div class="hero-actions">
       <button class="btn-gold" onclick="document.getElementById('checker').scrollIntoView({behavior:'smooth'})">Check my Whitelist</button>
@@ -989,7 +989,7 @@
         <input class="wallet-input" id="walletInput" type="text" placeholder="Enter your wallet address (0x...)" maxlength="42" />
         <button class="check-btn" id="checkBtn" onclick="checkWallet()">Verify →</button>
       </div>
-      <div class="checker-note">Your address is never stored. Read-only verification against the Base blockchain.</div>
+      <div class="checker-note">Your address is never stored. Read-only verification. Nothing is signed or submitted.</div>
     </div>
     <div class="result-panel" id="resultPanel">
       <div class="result-addr" id="resultAddr"></div>
@@ -1105,7 +1105,7 @@
     <div class="section-eyebrow">The Lore</div>
     <h2 class="section-title">The World</h2>
     <p class="section-sub" style="max-width:640px;margin:12px auto 0">
-      In the beginning, there was only the Void. Then came The Fracture — a cataclysm that shattered existence into ten distinct realms, each one warping a fragment of the original energy into a world of its own. The Voidwalkers were scattered across them. They do not know how they arrived. They only know that something beyond the horizon is calling them forward.
+      In the beginning, there was only the Void. Then came The Fracture — a cataclysm that shattered existence into ten distinct realms, each one warping a fragment of the original energy into a world of its own. The Voidwalkers were scattered across them. They do not know how they arrived. They only know that something beyond the horizon is calling them forward. Each realm is held by an Ancient, its guardian. At the end of every realm one waits, and the way onward lies through it.
     </p>
   </div>
 
@@ -1121,7 +1121,7 @@
         <div class="realm-expand">
           <div class="realm-warden-label">Ancient</div>
           <div class="realm-warden-name">High Assassin</div>
-          <div class="realm-warden-desc">It does not fight with strength. It fights with patience — infecting its enemies with a slow curse that makes them forget why they were fighting.</div>
+          <div class="realm-warden-desc">Pure agility. Two daggers, struck faster than the eye can follow. In Berserk its blows come quicker and land harder. Then it slips into Stealth, appears at the enemy's back, and ends the fight with a single critical Backstab.</div>
         </div>
       </div>
     </div>
@@ -1266,7 +1266,7 @@
   <div class="section-header">
     <div class="section-eyebrow">The Ten</div>
     <h2 class="section-title">The Ancients</h2>
-    <p class="section-sub" style="max-width:580px;margin:12px auto 0">Ten 1/1 beings. One for every realm. Each has been there since before the Voidwalkers arrived — and will remain long after they leave. Only one has been revealed.</p>
+    <p class="section-sub" style="max-width:580px;margin:12px auto 0">Ten 1/1 beings. One guardian for every realm. Each has been there since before the Voidwalkers arrived — and will remain long after they leave. Only one has been revealed.</p>
   </div>
   <div class="ancient-reveal">
     <div class="ancient-reveal-img">
@@ -1276,7 +1276,7 @@
       <div class="ancient-reveal-realm">Realm I · Forsaken Prison</div>
       <div class="ancient-reveal-name">High Assassin</div>
       <div class="ancient-reveal-badge">Ancient · 1/1</div>
-      <div class="ancient-reveal-lore">It does not fight with strength. It fights with patience — infecting its enemies with a slow curse that makes them forget why they were fighting.</div>
+      <div class="ancient-reveal-lore">Pure agility. Two daggers, struck faster than the eye can follow. In Berserk its blows come quicker and land harder. Then it slips into Stealth, appears at the enemy's back, and ends the fight with a single critical Backstab.</div>
       <div class="ancient-reveal-locked">
         <span class="lock-icon">⬡</span>
         <span>9 Ancients remain unrevealed. Each rules a realm. Each holds a secret.</span>
@@ -1349,7 +1349,7 @@
     </div>
     <div class="faq-item">
       <div class="faq-q" onclick="toggleFaq(this)">Is my wallet address stored when I use the WL checker? <span class="faq-plus">+</span></div>
-      <div class="faq-a">No. The checker makes a read-only call to the Base blockchain to verify your Azukats balance. Nothing is stored, signed, or submitted on your behalf.</div>
+      <div class="faq-a">No. The checker only reads public on-chain data to verify your wallet. Nothing is stored, signed, or submitted on your behalf.</div>
     </div>
   </div>
 </div>
@@ -1460,10 +1460,10 @@ async function checkWallet() {
   panel.className = 'result-panel show';
   resultAddr.textContent = input;
   resultIcon.textContent = '🔍';
-  resultStatusText.textContent = 'Querying Base blockchain...';
+  resultStatusText.textContent = 'Checking your wallet...';
   resultMain.className = 'result-main';
   resultMain.textContent = 'Checking...';
-  resultSub.textContent = 'Reading Azukats contract on Base. This takes just a moment.';
+  resultSub.textContent = 'Reading on-chain data. This takes just a moment.';
   resultDivider.style.display = 'none';
   resultDetails.style.display = 'none';
 
@@ -1513,7 +1513,7 @@ async function checkWallet() {
     resultStatusText.textContent = 'Network Error';
     resultMain.className = 'result-main no';
     resultMain.textContent = 'Could not connect';
-    resultSub.textContent = 'Failed to reach the Base RPC endpoint. Please check your connection and try again. Error: ' + err.message;
+    resultSub.textContent = 'Could not reach the network. Please check your connection and try again. Error: ' + err.message;
   } finally {
     btn.disabled = false;
     btn.innerHTML = 'Verify →';
